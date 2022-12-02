@@ -53,9 +53,13 @@ public class UtilLoader {
         Instant instant1 = null;
         try {
             integer = Integer.parseInt((String) properties.get("numberProperty"));
+        } catch (NumberFormatException e) {
+            throw new PropertyNotFound("Number property not found");
+        }
+        try {
             instant1 = FMT.parse((CharSequence) properties.get("timeProperty"), Instant::from);
-        } catch (NumberFormatException | NullPointerException e) {
-            throw new PropertyNotFound("Error: ", e);
+        } catch (NullPointerException e) {
+            throw new PropertyNotFound("Instant property not found");
         }
         try {
             if (stringProperty != null) {
@@ -63,16 +67,10 @@ public class UtilLoader {
             } else {
                 throw new PropertyNotFound("String property not found");
             }
-            if (integer != null) {
-                cls.getMethod("setMyNumber", new Integer(0).getClass()).invoke(t, integer);
-            } else {
-                throw new PropertyNotFound("Number property not found");
-            }
-            if (instant1 != null) {
-                cls.getMethod("setTimeProperty", Instant.now().getClass()).invoke(t, instant1);
-            } else {
-                throw new PropertyNotFound("Instant property not found");
-            }
+
+            cls.getMethod("setMyNumber", new Integer(0).getClass()).invoke(t, integer);
+
+            cls.getMethod("setTimeProperty", Instant.now().getClass()).invoke(t, instant1);
             return (T) t;
         } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
             throw new PropertyNotFound("Error: " + e);
