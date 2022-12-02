@@ -1,14 +1,13 @@
 package com.intern.practice3.task2;
 
+import com.intern.practice3.task2.exceptions.PropertyNotFound;
+
 import java.io.File;
-import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Path;
-import java.text.ParseException;
 
 public class Demo {
 
-    public static void main(String[] args) throws IOException, NoSuchFieldException, ParseException, InvocationTargetException, NoSuchMethodException, IllegalAccessException, InstantiationException {
+    public static void main(String[] args) throws PropertyNotFound {
         UtilLoader u = new UtilLoader();
         TestClass tclass = new TestClass();
         File file = new File("src/main/resources/types.properties");

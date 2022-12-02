@@ -1,36 +1,39 @@
 package com.intern.practice3.task2;
 
+import com.intern.practice3.task2.exceptions.PropertyNotFound;
+
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.nio.file.Path;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
-import java.time.temporal.ChronoField;
-import java.util.Arrays;
 import java.util.Locale;
 import java.util.Properties;
 
 public class UtilLoader {
 
-    public static <T>T loadFromProperties(Class<T> cls, Path propertiesPath) throws IOException, NoSuchFieldException, ParseException, NoSuchMethodException, InvocationTargetException, IllegalAccessException, InstantiationException {
+    public static <T> T loadFromProperties(Class<T> cls, Path propertiesPath) throws PropertyNotFound {
         Properties properties = new Properties();
-        T t = (T) cls.newInstance();
-        Method m[] = cls.getDeclaredMethods();
-        FileInputStream fileInputStream = new FileInputStream(String.valueOf(propertiesPath));
-        properties.load(fileInputStream);
+        try {
+            FileInputStream fileInputStream = new FileInputStream(String.valueOf(propertiesPath));
+            properties.load(fileInputStream);
+        } catch (IOException e) {
+            throw new PropertyNotFound("Property file not found");
+        }
         String instant = null;
-        Field f = TestClass.class.getDeclaredField("timeProperty");
+        Field f = null;
+        try {
+            f = cls.getDeclaredField("timeProperty");
+        } catch (NoSuchFieldException e) {
+            throw new PropertyNotFound("time property field not found");
+        }
         Annotation annotation = f.getAnnotation(Property.class);
-        if(annotation instanceof Property){
+        if (annotation instanceof Property) {
             Property cAnn = (Property) annotation;
             instant = cAnn.format();
         }
@@ -39,25 +42,41 @@ public class UtilLoader {
                 .toFormatter()
                 .withLocale(Locale.getDefault())
                 .withZone(ZoneId.systemDefault());
+        T t = null;
+        try {
+            t = (T) cls.newInstance();
+        } catch (InstantiationException | IllegalAccessException e) {
+            throw new PropertyNotFound("Error: " + e);
+        }
         Object stringProperty = properties.get("stringProperty");
-        Integer integer = Integer.parseInt((String) properties.get("numberProperty"));
-        Instant instant1 = FMT.parse((CharSequence) properties.get("timeProperty"), Instant::from);
-        if (stringProperty != null) {
-            cls.getMethod("setStringProperty", new String().getClass()).invoke(t, stringProperty);
-        } else {
-            throw new FileNotFoundException();
+        Integer integer = null;
+        Instant instant1 = null;
+        try {
+            integer = Integer.parseInt((String) properties.get("numberProperty"));
+            instant1 = FMT.parse((CharSequence) properties.get("timeProperty"), Instant::from);
+        } catch (NumberFormatException | NullPointerException e) {
+            throw new PropertyNotFound("Error: ", e);
         }
-        if (integer != null) {
-            cls.getMethod("setMyNumber", new Integer(0).getClass()).invoke(t, integer);
-        } else {
-            throw new FileNotFoundException();
+        try {
+            if (stringProperty != null) {
+                cls.getMethod("setStringProperty", new String().getClass()).invoke(t, stringProperty);
+            } else {
+                throw new PropertyNotFound("String property not found");
+            }
+            if (integer != null) {
+                cls.getMethod("setMyNumber", new Integer(0).getClass()).invoke(t, integer);
+            } else {
+                throw new PropertyNotFound("Number property not found");
+            }
+            if (instant1 != null) {
+                cls.getMethod("setTimeProperty", Instant.now().getClass()).invoke(t, instant1);
+            } else {
+                throw new PropertyNotFound("Instant property not found");
+            }
+            return (T) t;
+        } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
+            throw new PropertyNotFound("Error: " + e);
         }
-        if (instant1 != null) {
-            cls.getMethod("setTimeProperty", Instant.now().getClass()).invoke(t, instant1);
-        } else {
-            throw new FileNotFoundException();
-        }
-        return (T) t;
     }
 
 }
